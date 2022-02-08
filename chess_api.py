@@ -86,12 +86,17 @@ class Board():
                 if curr == None: pass #Empty space
                 elif curr.get_color == color: #Occupied by friendly piece
                     return True
-                elif x !- moveRow: #Cell contains enemy piece, but on path rather than at destination
+                elif x != moveRow: #Cell contains enemy piece, but on path rather than at destination
                     return True
             return False
 
         else: #Diagonal move
-            if (moveRow < row and moveCol < col) or (moveRow > row and moveCol > col)
+            if (moveRow < row and moveCol < col) or (moveRow > row and moveCol > col):
+                pass
+    
+    def get_grid(self):
+        return self.grid
+        
 #Parent for all pieces
 class Piece():
     def __init__(self, row, col, color):
@@ -161,8 +166,3 @@ class King(Piece):
     pass
 
 
-
-B = Board()
-for i in range(8):
-    for n in range(8):
-        print(B.grid[i][n])
