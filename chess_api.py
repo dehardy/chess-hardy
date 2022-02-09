@@ -1,5 +1,5 @@
 #Chess API
-
+import pygame
 
 class Board():
 
@@ -10,29 +10,29 @@ class Board():
 
         #Put Pawns on Board
         for i in range(8):
-            self.grid[i][1] = Pawn(1, i, "White")
-            self.grid[i][6] = Pawn(6, i, "Black")
+            #self.grid[i][6] = Pawn(1, i, "White")
+            self.grid[i][1] = Pawn(6, i, "Black")
 
         #Put other pieces
         #White pieces
-        self.grid[0][0] = Rook(0, 0, "White")
-        self.grid[1][0] = Knight(0, 1, "White")
-        self.grid[2][0] = Bishop(0, 2, "White")
-        self.grid[3][0] = Queen(0, 3, "White")
-        self.grid[4][0] = King(0, 4, "White")
-        self.grid[5][0] = Bishop(0, 5, "White")
-        self.grid[6][0] = Knight(0, 6, "White")
-        self.grid[7][0] = Rook(0, 7, "White")
+        self.grid[0][7] = Rook(7, 0, "White")
+        self.grid[1][7] = Knight(7, 1, "White")
+        self.grid[2][7] = Bishop(7, 2, "White")
+        self.grid[3][4] = Queen(4, 3, "White")
+        self.grid[4][7] = King(7, 4, "White")
+        self.grid[5][7] = Bishop(7, 5, "White")
+        self.grid[6][7] = Knight(7, 6, "White")
+        self.grid[7][7] = Rook(7, 7, "White")
 
         #Black pieces
-        self.grid[0][7] = Rook(7, 0, "Black")
-        self.grid[1][7] = Knight(7, 1, "Black")
-        self.grid[2][7] = Bishop(7, 2, "Black")
-        self.grid[3][7] = Queen(7, 3, "Black")
-        self.grid[4][7] = King(7, 4, "Black")
-        self.grid[5][7] = Bishop(7, 5, "Black")    
-        self.grid[6][7] = Knight(7, 6, "Black") 
-        self.grid[7][7] = Rook(7, 7, "Black")
+        self.grid[0][0] = Rook(0, 0, "Black")
+        self.grid[1][0] = Knight(0, 1, "Black")
+        self.grid[2][0] = Bishop(0, 2, "Black")
+        self.grid[3][0] = Queen(0, 3, "Black")
+        self.grid[4][0] = King(0, 4, "Black")
+        self.grid[5][0] = Bishop(0, 5, "Black")    
+        self.grid[6][0] = Knight(0, 6, "Black") 
+        self.grid[7][0] = Rook(0, 7, "Black")
 
     def select_piece(self, row, col):
         P = self.grid[col][row]
@@ -41,12 +41,14 @@ class Board():
 
         if not isinstance(P, Knight):
             for move in piece_moves:
-                if not is_obstructed(row, col, move, P.get_color()):
+                if not self.is_obstructed(row, col, move, P.get_color()):
                     valid_moves.append(move)
         else:
             for move in piece_moves:
                 if not is_obstructed_knight:
                     valid_moves.append(move)
+        
+        return valid_moves
 
     #Detemine is a piece (other than knight) at position (row, col) can move to the cell designated by "move" 
     def is_obstructed(self, row, col, move, color):
@@ -60,33 +62,33 @@ class Board():
 
         if row == moveRow: #Same row
             if moveCol > col: 
-                y1 = col + 1
-                y2 = moveCol + 1
+                x1 = col + 1
+                x2 = moveCol + 1
             else:
-                y1 = moveCol
-                y2 = col
-            for y in range(y1, y2):
-                curr = self.grid[y][row]
+                x1 = moveCol
+                x2 = col
+            for curr_col in range(x1, x2):
+                curr = self.grid[curr_col][row]
                 if curr == None: pass #Empty Space
-                elif curr.get_color == color: #Occupied by friendly piece
+                elif curr.get_color() == color: #Occupied by friendly piece
                     return True
-                elif y != moveCol: #Cell contains enemy piece, but on path rather than at destination
+                elif curr_col != moveCol: #Cell contains enemy piece, but on path rather than at destination
                     return True
             return False
 
         elif col == moveCol: #Same column
             if moveRow > row:
-                x1 = row + 1
-                x2 = moveRow + 1
+                y1 = row + 1
+                y2 = moveRow + 1
             else:
-                x1 = moveRow
-                x2 = row
-            for x in range(x1, x2):
-                curr = self.grid[col][x]
+                y1 = moveRow
+                y2 = row
+            for curr_row in range(y1, y2):
+                curr = self.grid[col][curr_row]
                 if curr == None: pass #Empty space
-                elif curr.get_color == color: #Occupied by friendly piece
+                elif curr.get_color() == color: #Occupied by friendly piece
                     return True
-                elif x != moveRow: #Cell contains enemy piece, but on path rather than at destination
+                elif curr_row != moveRow: #Cell contains enemy piece, but on path rather than at destination
                     return True
             return False
 
@@ -96,12 +98,12 @@ class Board():
     
     def get_grid(self):
         return self.grid
-        
+
 #Parent for all pieces
 class Piece():
     def __init__(self, row, col, color):
         self.color = color
-        self.location = (row, col)
+        self.location = (col, row)
 
     def get_location(self):
         return self.location
@@ -120,13 +122,13 @@ class Rook(Piece):
 
     def get_moves(self):
         moves = []
-        rX = self.location[1]
-        rY = self.location[0]
+        col = self.location[0]
+        row = self.location[1]
         for i in range(8):
-            if i != rX:
-                moves.append((rY, i))
-            if i != rY:
-                moves.append((i, rX))
+            if i != col:
+                moves.append((i, row))
+            if i != row:
+                moves.append((col, i))
         return moves
 
         
@@ -142,7 +144,9 @@ class Bishop(Piece):
         return moves
 
 class Knight(Piece):
-    pass
+    
+    def get_moves(self):
+        pass
 class Queen(Piece):
 
     def get_moves(self):
@@ -151,14 +155,15 @@ class Queen(Piece):
         qY = self.location[0]
         for o in range (-7, 8):
             if 0 >= qX + o and qX + o < 8 and 0 >= qY + o and qY + o < 8:
-                moves.append(qY + o, qX + o)
+                moves.append((qY + o, qX + o))
 
         for i in range(8):
             if i != qX:
-                moves.append(qY, i)
+                moves.append((qY, i))
             if i != qY:
-                moves.append(i, qX)
-            
+                moves.append((i, qX))
+        
+        return moves
 class Pawn(Piece):
     pass
 
