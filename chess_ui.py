@@ -1,4 +1,4 @@
-import pygame
+import pygame, os
 from chess_api import *
 
 
@@ -27,6 +27,9 @@ class Cell(pygame.sprite.Sprite):
                 self.cell_sub.fill((0, 0, 127))
             else:
                 self.cell_sub.fill((0, 0, 0))
+        
+    def clear_selection(self):
+        self.selected = False
 
     def get_subsurface(self):
         return self.cell_sub
@@ -42,6 +45,9 @@ class Cell(pygame.sprite.Sprite):
 
     def toggle_selection(self):
         self.selected = not self.selected
+
+    def get_selection(self):
+        return self.selected
 
 
 
@@ -67,7 +73,7 @@ def main():
 
             black = not black
             cells_group.add(sprite_cell)
-            cells_list[col][row] = sprite_cell
+            cells_list[row][col] = sprite_cell
         black = not black #needed for correct colors
 
     pygame.display.flip()
@@ -76,7 +82,9 @@ def main():
 
     pygame.event.set_allowed([pygame.MOUSEBUTTONDOWN])
     event = pygame.event.wait()
-    print(event.pos)
+    update_image(cells_list, cells_group, B, event.pos)
+
+    event = pygame.event.wait()
     update_image(cells_list, cells_group, B, event.pos)
 
     event = pygame.event.wait()
@@ -90,39 +98,42 @@ def update_image(cells, cell_group, gamestate, mouse_pos = None):
 
     for row in range(8):
         for col in range(8):
-            piece = grid[col][row]
-            cell = cells[col][row]
+            piece = grid[row][col]
+            cell = cells[row][col]
             if mouse_pos != None and cell.get_rect().collidepoint(mouse_pos):
-                cell.toggle_selection()
-                moves = gamestate.select_piece(row, col)
-                for move in moves:
-                    cells[move[0]][move[1]].toggle_selection()
-                    cells[move[0]][move[1]].update()
-            cell.update()
+                if piece == None and gamestate.get_piece_selected() != None:
+                    selected_piece = gamestate.get_piece_selected()
+                    gamestate.move((row, col))
+                    cell.set_piece(gamestate.get_grid()[selected_piece[0]][selected_piece[1]])
+                    cell.update()
+                    piece = grid[row][col]
+
+                else:
+                    cell.toggle_selection()
+                    moves = gamestate.select_piece(row, col)
+                    for move in moves:
+                        cells[move[0]][move[1]].toggle_selection()
+                        cells[move[0]][move[1]].update()
+                    cell.update()
+
             if isinstance(piece, Pawn):
-                text = letter_font.render("P", True, ((255, 0, 0)))
                 cell.set_piece(piece)
-                cell.get_subsurface().blit(text, (0, 0))
+                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "pawn_%s.png" %piece.get_color())), (100, 100)), (0, 0))
             elif isinstance(piece, Rook):
-                text = letter_font.render("R", True, ((255, 0, 0)))
                 cell.set_piece(piece)
-                cell.get_subsurface().blit(text, (0, 0))
+                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "rook_%s.png" %piece.get_color())), (100, 100)), (0, 0))
             elif isinstance(piece, Bishop):
-                text = letter_font.render("B", True, ((255, 0, 0)))
                 cell.set_piece(piece)
-                cell.get_subsurface().blit(text, (0, 0))            
+                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "bishop_%s.png" %piece.get_color())), (100, 100)), (0, 0))
             elif isinstance(piece, Knight):
-                text = letter_font.render("Kn", True, ((255, 0, 0)))
                 cell.set_piece(piece)
-                cell.get_subsurface().blit(text, (0, 0))
+                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "knight_%s.png" %piece.get_color())), (100, 100)), (0, 0))
             elif isinstance(piece, Queen):
-                text = letter_font.render("Q", True, ((255, 0, 0)))
                 cell.set_piece(piece)
-                cell.get_subsurface().blit(text, (0, 0))
+                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "queen_%s.png" %piece.get_color())), (100, 100)), (0, 0))
             elif isinstance(piece, King):
-                text = letter_font.render("Ki", True, ((255, 0, 0)))
                 cell.set_piece(piece)
-                cell.get_subsurface().blit(text, (0, 0))
+                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "king_%s.png" %piece.get_color())), (100, 100)), (0, 0))
 
     pygame.display.flip()
 
