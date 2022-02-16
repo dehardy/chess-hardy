@@ -19,7 +19,7 @@ class Cell(pygame.sprite.Sprite):
     def update(self):
         if self.color == "black":
             if self.selected:
-                self.cell_sub.fill((27, 127, 255))
+                self.cell_sub.fill((127, 127, 255))
             else:
                 self.cell_sub.fill((255, 255, 255))
         else:
@@ -27,6 +27,20 @@ class Cell(pygame.sprite.Sprite):
                 self.cell_sub.fill((0, 0, 127))
             else:
                 self.cell_sub.fill((0, 0, 0))
+
+        if isinstance(self.piece, Pawn):
+            self.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "pawn_%s.png" %self.piece.get_color())), (100, 100)), (0, 0))
+        elif isinstance(self.piece, Rook):
+            self.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "rook_%s.png" %self.piece.get_color())), (100, 100)), (0, 0))
+        elif isinstance(self.piece, Bishop):
+            self.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "bishop_%s.png" %self.piece.get_color())), (100, 100)), (0, 0))
+        elif isinstance(self.piece, Knight):
+            self.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "knight_%s.png" %self.piece.get_color())), (100, 100)), (0, 0))
+        elif isinstance(self.piece, Queen):
+            self.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "queen_%s.png" %self.piece.get_color())), (100, 100)), (0, 0))
+        elif isinstance(self.piece, King):
+            self.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "king_%s.png" %self.piece.get_color())), (100, 100)), (0, 0))
+
         
     def clear_selection(self):
         self.selected = False
@@ -63,6 +77,13 @@ def main():
     cell_height = 100
     cells_list = [[None] * 8 for i in range(8)]
     cells_group = pygame.sprite.Group()
+    cells_selected_group = pygame.sprite.Group()
+    console = my_display.subsurface(pygame.Rect(800, 0, 400, 100))
+    turn = "white"
+    B = Board()
+
+
+    checkmate = False
 
     black = False
 
@@ -74,25 +95,24 @@ def main():
             black = not black
             cells_group.add(sprite_cell)
             cells_list[row][col] = sprite_cell
+            sprite_cell.set_piece(B.get_grid()[row][col])
         black = not black #needed for correct colors
 
+    cells_group.update()
     pygame.display.flip()
-    B = Board()
-    update_image(cells_list, cells_group, B)
 
     pygame.event.set_allowed([pygame.MOUSEBUTTONDOWN])
-    event = pygame.event.wait()
-    update_image(cells_list, cells_group, B, event.pos)
 
-    event = pygame.event.wait()
-    update_image(cells_list, cells_group, B, event.pos)
+    while not checkmate:
+        event = pygame.event.wait()
+        if update_image(console, cells_list, cells_group, cells_selected_group, B, turn, event.pos):
 
-    event = pygame.event.wait()
-    
+            turn = "black" if turn == "white" else "white"
+        pygame.display.flip()
 
-
-def update_image(cells, cell_group, gamestate, mouse_pos = None):
+def update_image(console, cells, cells_group, cells_selected_group, gamestate, turn, mouse_pos = None):
     grid = gamestate.get_grid()
+    opponent = "white" if turn == "black" else "black"
     letter_font = pygame.font.Font(pygame.font.get_default_font(), 75)
     selected_cell = None
 
@@ -100,43 +120,54 @@ def update_image(cells, cell_group, gamestate, mouse_pos = None):
         for col in range(8):
             piece = grid[row][col]
             cell = cells[row][col]
-            if mouse_pos != None and cell.get_rect().collidepoint(mouse_pos):
-                if piece == None and gamestate.get_piece_selected() != None:
-                    selected_piece = gamestate.get_piece_selected()
-                    gamestate.move((row, col))
-                    cell.set_piece(gamestate.get_grid()[selected_piece[0]][selected_piece[1]])
-                    cell.update()
-                    piece = grid[row][col]
+            if mouse_pos != None and cell.get_rect().collidepoint(mouse_pos): #If mouse clicked on cell
+                selected_piece = gamestate.get_piece_selected()
 
-                else:
+                if cell in cells_selected_group: #move piece if applicable
+
+                    if selected_piece == (row, col): #Clicked cell with currently selected piece
+                        for sprite in cells_selected_group.sprites():
+                            cells_selected_group.remove(sprite)
+                            sprite.toggle_selection()
+                            sprite.update()
+
+                    else: #Clicked cell which will move piece
+                        cell.set_piece(gamestate.get_grid()[selected_piece[0]][selected_piece[1]]) #set current cell piece equal to piece that will be there
+                        gamestate.move((row, col)) #move the piece in the backend
+                        cells[selected_piece[0]][selected_piece[1]].set_piece(None) #clear the piece from the old cell
+                        piece = grid[row][col]
+
+                        for sprite in cells_selected_group.sprites():
+                            cells_selected_group.remove(sprite)
+                            sprite.toggle_selection()
+                            sprite.update()
+
+                        if gamestate.is_in_check(opponent):
+                            if gamestate.is_checkmated(opponent):
+                                console.blit(letter_font.render("CHECKMATE!!!", False, (0, 0, 0)), console.get_rect())
+                            else:
+                                console.blit(letter_font.render("Check!", False, (0, 0, 0)), console.get_rect())
+                        else:
+                            console.fill((127, 127, 127))
+                        return True
+
+                elif cell.get_piece() != None and cell.get_piece().get_color() == turn: #Clicked on a piece
+                    if selected_piece != None: #Clicked new piece to select
+                        for sprite in cells_selected_group.sprites(): #Deselect old
+                            cells_selected_group.remove(sprite)
+                            sprite.toggle_selection()
+                            sprite.update()
+
+                    cells_selected_group.add(cell)
                     cell.toggle_selection()
                     moves = gamestate.select_piece(row, col)
                     for move in moves:
+                        cells_selected_group.add((cells[move[0]][move[1]]))
                         cells[move[0]][move[1]].toggle_selection()
                         cells[move[0]][move[1]].update()
-                    cell.update()
+            cell.update()
 
-            if isinstance(piece, Pawn):
-                cell.set_piece(piece)
-                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "pawn_%s.png" %piece.get_color())), (100, 100)), (0, 0))
-            elif isinstance(piece, Rook):
-                cell.set_piece(piece)
-                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "rook_%s.png" %piece.get_color())), (100, 100)), (0, 0))
-            elif isinstance(piece, Bishop):
-                cell.set_piece(piece)
-                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "bishop_%s.png" %piece.get_color())), (100, 100)), (0, 0))
-            elif isinstance(piece, Knight):
-                cell.set_piece(piece)
-                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "knight_%s.png" %piece.get_color())), (100, 100)), (0, 0))
-            elif isinstance(piece, Queen):
-                cell.set_piece(piece)
-                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "queen_%s.png" %piece.get_color())), (100, 100)), (0, 0))
-            elif isinstance(piece, King):
-                cell.set_piece(piece)
-                cell.get_subsurface().blit(pygame.transform.scale(pygame.image.load(os.path.join("sprites", "king_%s.png" %piece.get_color())), (100, 100)), (0, 0))
-
-    pygame.display.flip()
-
+    return False
 if __name__ == "__main__":
     main()
 
